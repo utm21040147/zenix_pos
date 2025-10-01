@@ -1,5 +1,5 @@
-# zenix_pos_finalpry
-
+# ZENIX_POS
+## Final Proyect
 A new Flutter project.
 
 ## Getting Started

@@ -2,14 +2,14 @@ import 'product_model.dart';
 
 class Sale {
   final int? id;
+  final double total;
+  final DateTime date;
   final List<Product> items;
-  final double totalAmount;
-  final DateTime timestamp;
 
   Sale({
     this.id,
-    required this.items,
-    required this.totalAmount,
-    required this.timestamp,
+    required this.total,
+    required this.date,
+    this.items = const [],
   });
 }
