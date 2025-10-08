@@ -1,12 +1,13 @@
+// Reemplaza el contenido de add_product_screen.dart con esto
+
 import 'package:flutter/material.dart';
-import 'package:zenix_pos/models/product_model.dart';
-import 'package:zenix_pos/services/database_service.dart';
+import 'package:zenix_pos/services/api_service.dart'; // CAMBIO: Usamos ApiService
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({Key? key}) : super(key: key);
+  const AddProductScreen({super.key});
 
   @override
-  _AddProductScreenState createState() => _AddProductScreenState();
+  State<AddProductScreen> createState() => _AddProductScreenState();
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
@@ -14,12 +15,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String _name = '';
   double _price = 0.0;
 
-  void _saveProduct() {
+  void _saveProduct() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      final newProduct = Product(name: _name, price: _price);
-      DatabaseService().insertProduct(newProduct);
-      Navigator.of(context).pop(true);
+
+      // CAMBIO: Se llama al ApiService para crear el producto
+      await ApiService().createProduct(_name, _price);
+
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
     }
   }
 
@@ -37,9 +42,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
           child: Column(
             children: [
               TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del Producto',
-                ),
+                decoration:
+                    const InputDecoration(labelText: 'Nombre del Producto'),
                 validator: (value) =>
                     value!.isEmpty ? 'Por favor ingresa un nombre' : null,
                 onSaved: (value) => _name = value!,
@@ -60,10 +64,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 onPressed: _saveProduct,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueGrey[700],
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
-                    vertical: 15,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 ),
                 child: const Text('Guardar'),
               ),

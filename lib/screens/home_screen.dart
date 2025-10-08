@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:zenix_pos/models/product_model.dart';
 import 'package:zenix_pos/models/sale_model.dart';
 import 'package:zenix_pos/providers/cart_provider.dart';
+import 'package:zenix_pos/services/api_service.dart'; // Se usa ApiService
 import 'package:zenix_pos/services/database_service.dart';
 import 'package:zenix_pos/widgets/app_drawer.dart';
 
-// La pantalla principal de la aplicación, donde se realizan las ventas.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -18,37 +18,50 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: Colors.blueGrey[800],
       ),
       drawer: const AppDrawer(),
-      // Dividimos la pantalla en dos paneles: productos a la izquierda y carrito a la derecha.
       body: Row(
         children: [
           // --- PANEL DE PRODUCTOS ---
-          // Panel izquierdo que muestra todos los productos disponibles.
           Expanded(
             flex: 2,
             child: Container(
               color: Colors.grey[200],
-              // Usamos un FutureBuilder para cargar la lista de productos de forma asíncrona desde la BD local.
               child: FutureBuilder<List<Product>>(
-                future: DatabaseService().getProducts(),
+                // MEJORA: Ahora carga los productos desde la API para ser consistente.
+                future: ApiService().getProducts(),
                 builder: (context, snapshot) {
-                  // Muestra un indicador de carga mientras espera los datos.
-                  if (!snapshot.hasData) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
+                  // MEJORA: Se añade un manejo de errores más claro para el usuario.
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Error al cargar productos desde la API.\nAsegúrate de que el servidor esté corriendo.\n\nDetalle: ${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
+                      ),
+                    );
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                        child: Text("No hay productos disponibles."));
+                  }
+
                   final products = snapshot.data!;
-                  // Mostramos los productos en una cuadrícula (GridView).
                   return GridView.builder(
                     padding: const EdgeInsets.all(8.0),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3, // Ideal para tablets
-                          childAspectRatio: 3 / 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                        ),
+                      crossAxisCount: 3,
+                      childAspectRatio: 3 / 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
                     itemCount: products.length,
                     itemBuilder: (ctx, i) => GestureDetector(
-                      // Al tocar un producto, se añade al carrito usando nuestro CartProvider.
                       onTap: () {
                         Provider.of<CartProvider>(
                           context,
@@ -84,15 +97,12 @@ class HomeScreen extends StatelessWidget {
           ),
 
           // --- PANEL DEL CARRITO ---
-          // Panel derecho que muestra el estado actual del carrito.
           Expanded(
             flex: 1,
-            // Consumer se redibuja automáticamente cada vez que el carrito cambia.
             child: Consumer<CartProvider>(
               builder: (ctx, cart, _) => Container(
                 padding: const EdgeInsets.all(16),
                 color: Colors.white,
-                // Hacemos que la columna sea deslizable para evitar errores de overflow visual.
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
@@ -104,7 +114,6 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       const Divider(),
-                      // Muestra la lista de productos que se han añadido al carrito.
                       ListView.builder(
                         shrinkWrap: true,
                         primary: false,
@@ -114,7 +123,6 @@ class HomeScreen extends StatelessWidget {
                           subtitle: Text(
                             '\$${cart.items[i].price.toStringAsFixed(2)}',
                           ),
-                          // Botón para quitar un producto del carrito.
                           trailing: IconButton(
                             icon: const Icon(
                               Icons.remove_circle_outline,
@@ -127,8 +135,6 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       const Divider(),
-
-                      // --- SECCIÓN DEL TOTAL Y BOTÓN DE COBRO ---
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 20.0),
                         child: Row(
@@ -141,7 +147,6 @@ class HomeScreen extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            // Muestra el precio total, calculado por el CartProvider.
                             Text(
                               '\$${cart.totalPrice.toStringAsFixed(2)}',
                               style: const TextStyle(
@@ -160,25 +165,21 @@ class HomeScreen extends StatelessWidget {
                             backgroundColor: Colors.green[600],
                             padding: const EdgeInsets.symmetric(vertical: 20),
                           ),
-                          // El botón se deshabilita si el carrito está vacío.
                           onPressed: cart.items.isEmpty
                               ? null
-                              // Lógica para finalizar la venta.
                               : () {
-                                  // 1. Crea un nuevo objeto de Venta.
+                                  // TAREA PENDIENTE: Esta lógica debe moverse a ApiService
+                                  // para registrar la venta en la base de datos central.
                                   final newSale = Sale(
                                     total: cart.totalPrice,
                                     date: DateTime.now(),
                                   );
-                                  // 2. Guarda la venta en la base de datos local.
                                   DatabaseService().insertSale(newSale);
-                                  // 3. Limpia el carrito para la siguiente venta.
                                   cart.clearCart();
-                                  // 4. Muestra un mensaje de confirmación.
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                        '¡Venta registrada con éxito!',
+                                        '¡Venta registrada (localmente)!',
                                       ),
                                     ),
                                   );

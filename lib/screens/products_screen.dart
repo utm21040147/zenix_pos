@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:zenix_pos/models/product_model.dart';
-import 'package:zenix_pos/services/database_service.dart';
+import 'package:zenix_pos/services/api_service.dart';
 import 'package:zenix_pos/widgets/app_drawer.dart';
 import 'add_product_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({super.key}); // Advertencia corregida
+  const ProductsScreen({super.key});
 
   @override
-  State<ProductsScreen> createState() => _ProductsScreenState(); // Error corregido
+  State<ProductsScreen> createState() => _ProductsScreenState();
 }
 
 class _ProductsScreenState extends State<ProductsScreen> {
@@ -22,14 +22,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   void _refreshProducts() {
     setState(() {
-      _productsFuture = DatabaseService().getProducts();
+      _productsFuture = ApiService().getProducts();
     });
   }
 
   void _navigateAndRefresh() async {
-    final result = await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const AddProductScreen()));
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const AddProductScreen()),
+    );
     if (result == true) {
       _refreshProducts();
     }
@@ -49,6 +49,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (snapshot.hasError) {
+            return Center(
+                child: Text('Error al cargar productos: ${snapshot.error}'));
+          }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No hay productos. ¡Agrega uno!'));
           }
@@ -63,8 +67,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () async {
-                    await DatabaseService().deleteProduct(product.id!);
-                    _refreshProducts();
+                    // MEJORA: Se añade una comprobación para asegurar que el ID no es nulo.
+                    if (product.id != null) {
+                      try {
+                        await ApiService().deleteProduct(product.id!);
+                        _refreshProducts();
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text('Error al eliminar: $e'),
+                              backgroundColor: Colors.red),
+                        );
+                      }
+                    }
                   },
                 ),
               );

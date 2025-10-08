@@ -5,7 +5,7 @@ import 'package:zenix_pos/services/database_service.dart';
 import 'package:zenix_pos/widgets/app_drawer.dart';
 
 class SalesHistoryScreen extends StatelessWidget {
-  const SalesHistoryScreen({Key? key}) : super(key: key);
+  const SalesHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
